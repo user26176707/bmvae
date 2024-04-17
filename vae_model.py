@@ -5,6 +5,10 @@ from torch.autograd import Variable
 import numpy as np
 import math
 
+if torch.cuda.is_available():
+  device = torch.device("cuda")
+else:
+  device = torch.device("cpu")
 
 def initialize_weights(net):
     for m in net.modules():
@@ -105,9 +109,9 @@ class VAE(torch.nn.Module):
         Return the latent normal sample z ~ N(mu, sigma^2)
         """
         mu = self.encoder.enc_mu(h_enc)
-        mu = mu.cuda()
+        mu = mu.to(device)
         log_sigma = self.encoder.enc_log_sigma(h_enc)
-        log_sigma = log_sigma.cuda()
+        log_sigma = log_sigma.to(device)
         sigma = torch.exp(log_sigma)
 
         self.z_mean = mu

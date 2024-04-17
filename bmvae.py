@@ -1,5 +1,6 @@
 """
 A script for clustering single cell mutation data.
+pytorch cpu compatible
 """
 import argparse
 import os
@@ -12,6 +13,11 @@ from gmm import G_Cluster
 from genotype_caller import GenotypeCaller
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+if torch.cuda.is_available():
+  device = torch.device("cuda")
+else:
+  device = torch.device("cpu")
 
 
 def main(args):
@@ -37,11 +43,11 @@ def main(args):
     d2 = np.max([data.shape[1] // 10, 64])
 
     encoder = Encoder(data.shape[1], d1, d2, args.dimension)
-    encoder = encoder.cuda()
+    encoder = encoder.to(device)
     decoder = Decoder(args.dimension, d2, d1, data.shape[1])
-    decoder = decoder.cuda()
+    decoder = decoder.to(device)
     vae = VAE(encoder, decoder, args.dimension)
-    vae = vae.cuda()
+    vae = vae.to(device)
 
     optimizer = torch.optim.RMSprop(vae.parameters(), lr=args.lr)
 
@@ -51,7 +57,7 @@ def main(args):
         total_loss = 0
         for step, x in vae_model.xs_gen(data, args.batch_size, 1):
             x = torch.from_numpy(x)
-            x = x.cuda()
+            x = x.to(device)
             tv_m = x == 3
             x[tv_m] = 0
 
@@ -77,7 +83,7 @@ def main(args):
     vae.eval()
     for step, x in vae_model.xs_gen(data, args.batch_size, 0):
         x = torch.from_numpy(x)
-        x = x.cuda()
+        x = x.to(device)
         with torch.no_grad():
             vae(x)
             mu = vae.z_mean.cpu().detach().numpy()
